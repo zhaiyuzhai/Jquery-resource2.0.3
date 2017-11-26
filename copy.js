@@ -194,6 +194,7 @@
             return jQuery.each(this,callback,args);
         },
         ready:function (fn) {
+            // 参考源码的819行
             jQuery.ready.promise().done(fn);
         },
         slice:function () {
@@ -276,9 +277,75 @@
         return target;
     }
     // 349-817扩展一些工具方法
-
+    // 供给jquery内部使用的
     jQuery.extend({
-        
+        expando:"jQuery"+(core_version+Math.random()).replace(/\d/g,""),
+        // 防止冲突的方法
+        noConflict:function (deep) {
+            if(window.$===jQuery){
+                window.$=_$;
+            }
+            if(deep&&window.jQuery===jQuery){
+                window.jQuery=_jQuery;
+            }
+            return jQuery;
+        },
+        isReady:false,
+        readyWait:1,
+        // 用来延迟DOM的操作（里面的内容填写true或者是false）
+        holdReady:function (hold) {
+            // 假如调用了holdReady的话，将状态加一
+            if(hold){
+                jQuery.readyWait++;
+            }else{
+                // 否则执行ready的方法
+                jQuery.ready(true);
+            }
+        },
+        // 此ready的函数的调用的话主要由两个部分组成，一个是供给开发人员来调用，一方面是给jquery的内部调用，所以内部给了传参的方法
+        ready:function (wait) {
+            // wait用来判断是内部还是外部使用
+            if(wait===true?--jQuery.readyWait:jQuery.isReady){
+                // 如果此函数的调用是由holdReady来的话就要判断readyWait的状态
+                return ;
+            }
+            // Remember that the DOM is ready
+            jQuery.isReady = true;
+            // 假如不为true的话就表示是由外部调用进入的，那么就需要判断之前是否有等待
+            if(wait!==true&&--jQuery.readyWait>0){
+                return ;
+            }
+            // 带解决的函数，以后查看？？？？
+            readyList.resolveWith( document, [ jQuery ] );
+
+            if(jQuery.fn.trigger){
+                jQuery(document).trigger("ready").off("ready");
+            }
+        },
+        isFunction:function (obj) {
+            return jQuery.type(obj)==="function";
+        },
+        isArray: Array.isArray,
+        isWindow:function (obj) {
+            return obj!=null&&obj===obj.window;
+        },
+        isNumeric:function (obj) {
+            // typeof NaN也是number类型
+            return !isNaN(parseFloat(obj))&&isFinite(obj);
+        },
+        type:function (obj) {
+            // null的typeof出来的类型是object（undefined和null）
+            if(obj===null){
+                return String(obj);
+            }
+            // 完美的利用了对象的toString的方法（返回对象的字符串）
+            return typeof obj==="object"||typeof
+                obj==="function"?class2type[core_toString.call(obj)]||"object":typeof  obj;
+        },
+        isPlainObject:function () {
+            
+        }
+
     })
     // 877-2856 选择器的功能
     // 2880-3042 jQuery里面的回调对象
