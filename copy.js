@@ -327,6 +327,7 @@
         },
         isArray: Array.isArray,
         isWindow:function (obj) {
+            // obj!=null防止输入null，undefined，“”等等没有属性的东西，从而产生报错
             return obj!=null&&obj===obj.window;
         },
         isNumeric:function (obj) {
@@ -342,8 +343,46 @@
             return typeof obj==="object"||typeof
                 obj==="function"?class2type[core_toString.call(obj)]||"object":typeof  obj;
         },
-        isPlainObject:function () {
-            
+        isPlainObject:function (obj) {
+            // 不是对象自变量的但是也会被typeof成object的有
+            // 1.window；2.DOM nodes 3.Any object or value whose internal [[Class]] property is not "[object Object]"
+            if(jQuery.type(obj)!=="object"||obj.nodeType||jQuery.isWindow(obj)){
+                return false;
+            }
+            // 来查看window底下的对象，location，history。。。
+            // 之所以要try，catch的话是因为在火狐小于20的版本调用location频繁的话会有报错
+            try{
+                // obj的constructor是Object，并且它的原型里面特有的属性isPrototypeOf
+                if ( obj.constructor &&
+                    !core_hasOwn.call( obj.constructor.prototype, "isPrototypeOf" ) ) {
+                    return false;
+                }
+            }catch(e){
+                return false;
+            }
+            return true;
+        },
+        isEmptyObject:function (obj) {
+            // 如果能够通过for in循环遍历出来的对象则直接退出
+            for (var name in obj ) {
+                return false;
+            }
+            return true;
+        },
+        error: function( msg ) {
+            throw new Error( msg );
+        },
+        parseHTML:function (data,context,keepScripts) {
+            // 首先对data来进行判断，如果没有的话或者不是string的直接退出
+            if( !data || typeof data !== "string"){
+                return null;
+            }
+            // 倘若第二个参数不写，而是直接写入第三个参数的话，做的错误处理
+            if ( typeof context === "boolean" ) {
+                keepScripts = context;
+                context = false;
+            }
+            context=context||document;
         }
 
     })
