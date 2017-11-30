@@ -382,9 +382,207 @@
                 keepScripts = context;
                 context = false;
             }
+            // 默认指定document
             context=context||document;
-        }
+            // 判断是否是单标签
+            var parsed = rsingleTag.exec( data ),
+                scripts = !keepScripts && [];
 
+            // 单标签的操作
+            if(parsed){
+                return [context.createElement(parsed[1])];
+            }
+            // 多标签的处理
+            parsed = jQuery.buildFragment( [ data ], context, scripts );
+            // 如果传入的是true的话，那么scripts就是false，否则就是[script,script]
+            if(scripts){
+                jQuery(scripts).remove();
+            }
+            // 追加进入一个数组里面
+            return jQuery.merge( [], parsed.childNodes );
+        },
+        parseJSON:JSON.parse,
+        parseXML:function(data){
+            var xml,tmp;
+            if(!data||typeof data !=="string"){
+                return null;
+            }
+            // 如果是一个不正确的xml的话IE可能会报错的，而一些其他的浏览器的话会返回错误标签但不会报错
+            try{
+                tmp = new DOMParser();
+                xml = tmp.parseFromString( data , "text/xml" );
+            }catch(e){
+                xml = undefined;
+            }
+
+            if ( !xml || xml.getElementsByTagName( "parsererror" ).length ) {
+                jQuery.error( "Invalid XML: " + data );
+            }
+            return xml;
+        },
+        noop:function () {
+            // 用来容错的，但是具体用处并未得知
+        },
+        // 为什么叫做全局eval
+        globalEval:function (code) {
+            //是因为 eval和window.eval的作用域并不同
+            var script,indirect=eval;
+            code=jQuery.trim(code);
+            if(code){
+                // 严格模式下不支持eval解析
+                if ( code.indexOf("use strict") === 1 ) {
+                    script = document.createElement("script");
+                    script.text = code;
+                    // 放到头部，以便可以让其他scripts脚本应用,用完立即删除,所以你不会在HTML文件中看到
+                    document.head.appendChild( script ).parentNode.removeChild( script );
+                } else {
+                    // Otherwise, avoid the DOM node creation, insertion
+                    // and removal by using an indirect global eval
+                    indirect( code );
+                }
+            }
+        },
+        // 转驼峰的写法，注意replace支持第二个参数写回调函数（回调函数的第一个参数是正则的全部，第二个是匹配的内容）
+        camelCase:function (string) {
+            // /^-ms-/,/-[\da-z]/ig
+            return string.replace(rmsPrefix,"ms-").replace(rdashAlpha,fcamelCase);
+        },
+        nodeName:function (elem,name) {
+            return elem.nodeName&&elem.nodeName.toLowerCase()==name.toLowerCase();
+        },
+        // 遍历整个集合的方法
+        each:function (obj,callback,args) {
+            // 传入的args参数是给内部使用的时候提供的
+            var value,i=0,length=obj.length,isArray=isArraylike(obj);
+            // 假如是内部使用的话
+            if(args){
+                // 如果是类数组的话
+                if(isArray){
+                    for(;i<length;i++){
+                        value=callback.apply(obj[i],args);
+                        if(value===false){
+                            break;
+                        }
+                    }
+                }else {
+                    for ( i in obj ) {
+                        value = callback.apply( obj[ i ], args );
+                        if ( value === false ) {
+                            break;
+                        }
+                    }
+                }
+            }else{
+                if ( isArray ) {
+                    for ( ; i < length; i++ ) {
+                        value = callback.call( obj[ i ], i, obj[ i ] );
+                        // 如果cb有返回值，并且是false的话，那么就跳出遍历
+                        if ( value === false ) {
+                            break;
+                        }
+                    }
+                } else {
+                    for ( i in obj ) {
+                        value = callback.call( obj[ i ], i, obj[ i ] );
+
+                        if ( value === false ) {
+                            break;
+                        }
+                    }
+                }
+            }
+            return obj;
+        },
+        trim:function (text) {
+            return text==null?"":core_trim.call(text);
+        },
+        makeArray:function (arr,result) {
+            var ret=result||[];
+            if(arr!=null){
+                // 如果是类似于数组的话（isArrayLike函数只接受类似数组的对象）
+                if(isArrayLike(Object(arr))){
+                    jQuery.merge(ret,typeof arr==="string"?[arr]:arr)
+                }else{
+                    core_push.call(ret,arr);
+                }
+            }
+            return ret;
+        },
+        inArray:function (elem,arr,i) {
+            // i在原生里面表示的是从那个下标开始查询
+            return arr==null?-1:core_indexOf.call(arr,elem,i)
+        },
+        // 融合数组或者是对象
+        merge:function (first,second) {
+            var l=second.length,
+                i=first.length,
+                j=0;
+            // 假如第二个参数有长度即类似于[1,2];{0:0,1:1,length:2}
+            if(typeof l==="number"){
+                for ( ; j < l; j++ ) {
+                    first[ i++ ] = second[ j ];
+                }
+            }else{
+                while(second[j]!==undefined){
+                    first[i++]=second[j++];
+                }
+            }
+            first.length=i;
+            return first;
+        },
+        // 类似于ES5里面的filter函数
+        grep:function (elems,callback,inv) {
+            // 此处的inv是用来取反的，填入false或者true
+            var retVal,
+                ret=[],
+                i=0,
+                length=elems.length;
+            inv=!!inv;
+            for(;i<length;i++){
+                retVal=!!callback(elems[i],i);
+                if(inv!==retVal){
+                    ret.push(elems[i]);
+                }
+            }
+            return ret;
+        },
+        // 原生数组里面的map，支持类数组队象
+        map: function( elems, callback, arg ) {
+            var value,
+                i = 0,
+                length = elems.length,
+                isArray = isArraylike( elems ),
+                ret = [];
+
+            // Go through the array, translating each of the items to their
+            if ( isArray ) {
+                for ( ; i < length; i++ ) {
+                    value = callback( elems[ i ], i, arg );
+
+                    if ( value != null ) {
+                        ret[ ret.length ] = value;
+                    }
+                }
+
+                // Go through every key on the object,
+            } else {
+                for ( i in elems ) {
+                    value = callback( elems[ i ], i, arg );
+
+                    if ( value != null ) {
+                        ret[ ret.length ] = value;
+                    }
+                }
+            }
+            // apply接受数组传值，并且打散了传入到concat里面去！！！！
+            return core_concat.apply( [], ret );
+        },
+        // 唯一的标志服
+        guid: 1,
+        // 代表了改变this指向的一种方法
+        proxy:function (fn,context) {
+            var tmp, args, proxy;
+        }
     })
     // 877-2856 选择器的功能
     // 2880-3042 jQuery里面的回调对象
