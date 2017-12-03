@@ -580,9 +580,37 @@
         // 唯一的标志服
         guid: 1,
         // 代表了改变this指向的一种方法
+        // 并且可以完成传参的操作，$.proxy(..,this,3,4)
         proxy:function (fn,context) {
             var tmp, args, proxy;
+            // 对$.proxy(obj,"show")的简写方法的操作处理
+            // 一般我们前面写上函数，然后后面写上this
+            if(typeof context==="string"){
+                tmp=fn[context];
+                context=fn;
+                fn=tmp;
+            }
+            if ( !jQuery.isFunction( fn ) ) {
+                return undefined;
+            }
+            // 对在函数内部传参的写法
+            args = core_slice.call( arguments, 2 );
+            proxy=function () {
+                // 里面的arguments可以支持在传入参数
+                return fn.apply(context||this,args.concat(core_slice.call(arguments)))
+            }
+            proxy.guid = fn.guid = fn.guid || jQuery.guid++;
+            return proxy;
+
+        },
+        access:function () {
+
+        },
+        now:Date.now,
+        swap:function () {
+
         }
+
     })
     // 877-2856 选择器的功能
     // 2880-3042 jQuery里面的回调对象
