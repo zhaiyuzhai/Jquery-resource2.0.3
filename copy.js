@@ -603,16 +603,127 @@
             return proxy;
 
         },
-        access:function () {
+        // 例如$.css既可以设置又可以获取（chainable表示是否是设置）  ****************不懂************8
+        access:function (elems, fn, key, value, chainable, emptyGet, raw) {
+            var i=0,
+                length=elems.length,
+                bulk=key==null;
+            // key的值如果是一个变量的话，那么手动设置chainable为true
+            if(jQuery.type(key)==="object"){
+                chainable=true;
+                // 分解开一次执行
+                for(i in key){
+                    jQuery.access(elems,fn,i,key[i],true,emptyGet,raw);
+                }
+                // 假如是单个的设置的话
+            }else if (value!==undefined){
+                chainable = true;
+                if ( !jQuery.isFunction( value ) ) {
+                    raw = true;
+                }
+                if(bulk){
+                    // 如果k为空或者undefined的话
+                    // 如果是字符串的话
+                    if(raw){
+                        fn.call(elems,value);
+                        fn=null;
+                    }else{
+                        bulk = fn;
+                        fn = function( elem, key, value ) {
+                            return bulk.call( jQuery( elem ), value );
+                    }
+                }
+                }
+                if ( fn ) {
+                    for ( ; i < length; i++ ) {
+                        fn( elems[i], key, raw ? value : value.call( elems[i], i, fn( elems[i], key ) ) );
+                    }
+                }
+            }
+            return chainable ?
+                elems :
 
+                // Gets
+                bulk ?
+                    fn.call( elems ) :
+                    length ? fn( elems[0], key ) : emptyGet;
         },
         now:Date.now,
-        swap:function () {
-
+        // 内部交换css的方法，尤其注意的是在原生的的js中当元素的display设置为none是无法获取宽和高（可以采用设置display为block然后visiblity为none，absolute定位的方式来处理）！！！！！！
+        swap:function (elem,options,callback,args) {
+            var ret,name,old={};
+            // 把老的属性先存起来，然后把新的属性附加上去
+            for(name in options){
+                old[ name ] = elem.style[ name ];
+                elem.style[ name ] = options[ name ];
+            }
+            // 执行
+            ret = callback.apply( elem, args || [] );
+            // 执行完成后再换回来
+            for ( name in options ) {
+                elem.style[ name ] = old[ name ];
+            }
+            return ret;
         }
 
-    })
+    });
+    jQuery.ready.promise = function( obj ) {
+        // 如果不存在readyList的话
+        if ( !readyList ) {
+
+            readyList = jQuery.Deferred();
+
+            // Catch cases where $(document).ready() is called after the browser event has already occurred.
+            // we once tried to use readyState "interactive" here, but it caused issues like the one
+            // discovered by ChrisS here: http://bugs.jquery.com/ticket/12282#comment:15
+            if ( document.readyState === "complete" ) {
+                // Handle it asynchronously to allow scripts the opportunity to delay ready
+                setTimeout( jQuery.ready );
+
+            } else {
+
+                // Use the handy event callback
+                document.addEventListener( "DOMContentLoaded", completed, false );
+
+                // A fallback to window.onload, that will always work
+                window.addEventListener( "load", completed, false );
+            }
+        }
+        return readyList.promise( obj );
+    };
+
+    // var arr=[1]
+    // console.log(Object.prototype.toString.call(arr))
+    // 22:05:23.690 [object Array]
+    jQuery.each("Boolean Number String Function Array Date RegExp Object Error".split(" "), function(i, name) {
+        class2type[ "[object " + name + "]" ] = name.toLowerCase();
+    });
+    function isArrayLike(obj) {
+        var length=obj.length;
+        type=jQuery.type(obj);
+        // 避免了window上面也有length的属性
+        if(jQuery.isWindow(obj)){
+            return false;
+        }
+        // 如果他们有nodeType的话，那么就表示是元素节点
+        if ( obj.nodeType === 1 && length ) {
+            return true;
+        }
+        // 对{
+        //     0:5，
+        //     1:6，
+        //     length：2
+        // }进行判断
+        return type === "array" || type !== "function" &&
+            ( length === 0 ||
+                typeof length === "number" && length > 0 && ( length - 1 ) in obj );
+    }
+    rootjQuery = jQuery(document);
     // 877-2856 选择器的功能
+
+
+
+
     // 2880-3042 jQuery里面的回调对象
     // 3043-3183延迟对象（异步）
     // 3184-3295实现support：功能检测
